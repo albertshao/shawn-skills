@@ -1,0 +1,23 @@
+{
+  "skill_name": "propbook-prompt-evaluator",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "帮我评估一下 PromptBook 里的 100729，并把结果保存成 JSON。",
+      "expected_output": "The skill resolves prompt ID 100729, fetches the prompt content, generates one valid JSON evaluation report, and saves it locally.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "评估 100729 到 100735，全部打分后回写到 PromptBook。",
+      "expected_output": "The skill expands the numeric range, evaluates each prompt, writes one JSON file per prompt, and posts only validated reports back to PromptBook.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "请帮我 review 100729、100731 和 100740 这三个 prompt，看看哪些可以发布。",
+      "expected_output": "The skill evaluates the three prompt IDs, outputs strict JSON reports, and surfaces recommendation values such as Publish, Publish with Revision, or Do Not Publish.",
+      "files": []
+    }
+  ]
+}
