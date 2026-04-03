@@ -1,5 +1,5 @@
 {
-  "skill_name": "propbook-prompt-evaluator",
+  "skill_name": "promptbook-prompt-evaluator",
   "evals": [
     {
       "id": 1,

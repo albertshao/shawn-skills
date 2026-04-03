@@ -62,7 +62,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--output-dir",
-        help="Directory for generated reports. Defaults to test-results/propbook-prompt-evaluator/<timestamp>/",
+        help="Directory for generated reports. Defaults to test-results/promptbook-prompt-evaluator/<timestamp>/",
     )
     parser.add_argument(
         "--resolve-only",
@@ -109,7 +109,7 @@ def ensure_output_dir(output_dir: str | None) -> Path:
         path = Path(output_dir)
     else:
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-        path = Path("test-results") / "propbook-prompt-evaluator" / timestamp
+        path = Path("test-results") / "promptbook-prompt-evaluator" / timestamp
     path.mkdir(parents=True, exist_ok=True)
     return path
 
@@ -165,14 +165,14 @@ def dot_get(data: Any, path: str, default: Any = None) -> Any:
 
 
 def fetch_prompt(prompt_id: int) -> PromptRecord:
-    template = get_env("PROPBOOK_GET_PROMPT_URL_TEMPLATE")
+    template = get_env("PROMPTBOOK_GET_PROMPT_URL_TEMPLATE")
     url = template.format(prompt_id=prompt_id)
     headers: dict[str, str] = {"Accept": "application/json"}
-    maybe_add_auth_headers(headers, "PROPBOOK_API_TOKEN")
+    maybe_add_auth_headers(headers, "PROMPTBOOK_API_TOKEN")
     payload = http_request("GET", url, headers=headers)
 
-    title_path = os.getenv("PROPBOOK_PROMPT_TITLE_PATH", "title")
-    prompt_path = os.getenv("PROPBOOK_PROMPT_TEXT_PATH", "prompt")
+    title_path = os.getenv("PROMPTBOOK_PROMPT_TITLE_PATH", "title")
+    prompt_path = os.getenv("PROMPTBOOK_PROMPT_TEXT_PATH", "prompt")
 
     title = dot_get(payload, title_path, f"Prompt {prompt_id}")
     prompt_text = dot_get(payload, prompt_path)
@@ -288,10 +288,10 @@ def write_json(path: Path, payload: dict[str, Any]) -> None:
 
 
 def post_result(prompt_id: int, evaluation: dict[str, Any]) -> dict[str, Any]:
-    template = get_env("PROPBOOK_POST_SCORE_URL_TEMPLATE")
+    template = get_env("PROMPTBOOK_POST_SCORE_URL_TEMPLATE")
     url = template.format(prompt_id=prompt_id)
     headers: dict[str, str] = {"Accept": "application/json"}
-    maybe_add_auth_headers(headers, "PROPBOOK_API_TOKEN")
+    maybe_add_auth_headers(headers, "PROMPTBOOK_API_TOKEN")
     body = {"prompt_id": prompt_id, "evaluation": evaluation}
     return http_request("POST", url, headers=headers, body=body)
 

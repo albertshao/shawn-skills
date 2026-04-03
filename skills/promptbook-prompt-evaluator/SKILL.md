@@ -1,9 +1,9 @@
 ---
-name: propbook-prompt-evaluator
-description: Evaluate PromptBook prompts by prompt ID or ID range, fetch prompt content from PromptBook, score prompt quality with the HSBC Prompt Quality Evaluator, generate strict JSON reports, and optionally post the evaluation back to PromptBook. Use this whenever the user mentions PromptBook, PropBook, prompt review, prompt scoring, prompt publishing checks, prompt IDs like 100729, or asks to assess one prompt or a range of prompts for quality and publish readiness.
+name: promptbook-prompt-evaluator
+description: Evaluate PromptBook prompts by prompt ID or ID range, fetch prompt content from PromptBook, score prompt quality with the HSBC Prompt Quality Evaluator, generate strict JSON reports, and optionally post the evaluation back to PromptBook. Use this whenever the user mentions PromptBook, prompt review, prompt scoring, prompt publishing checks, prompt IDs like 100729, or asks to assess one prompt or a range of prompts for quality and publish readiness.
 ---
 
-# PropBook Prompt Evaluator
+# PromptBook Prompt Evaluator
 
 Use this skill to run the full PromptBook prompt-review flow:
 
@@ -15,7 +15,7 @@ Use this skill to run the full PromptBook prompt-review flow:
 
 ## Script Location
 
-`skills/propbook-prompt-evaluator/scripts/evaluate_propbook_prompts.py`
+`skills/promptbook-prompt-evaluator/scripts/evaluate_promptbook_prompts.py`
 
 ## When To Use
 
@@ -41,12 +41,12 @@ If the request does not contain a resolvable prompt ID or range and no prompt te
 ## Environment Variables
 
 The bundled script expects configurable endpoints instead of hardcoded HSBC internals.
-Read [api_contract.md](/Users/olivia/shawn/codespace/knowledgebase/skills/propbook-prompt-evaluator/references/api_contract.md) before first use.
+Read [api_contract.md](/Users/olivia/shawn/codespace/shawn-skills/skills/promptbook-prompt-evaluator/references/api_contract.md) before first use.
 
 Required for PromptBook fetch:
 
-- `PROPBOOK_GET_PROMPT_URL_TEMPLATE`
-- `PROPBOOK_API_TOKEN` if the endpoint requires bearer auth
+- `PROMPTBOOK_GET_PROMPT_URL_TEMPLATE`
+- `PROMPTBOOK_API_TOKEN` if the endpoint requires bearer auth
 
 Required for evaluation:
 
@@ -60,12 +60,12 @@ Optional for evaluation:
 
 Optional for posting results back:
 
-- `PROPBOOK_POST_SCORE_URL_TEMPLATE`
+- `PROMPTBOOK_POST_SCORE_URL_TEMPLATE`
 
 Optional JSON-path overrides for fetch responses:
 
-- `PROPBOOK_PROMPT_TEXT_PATH` defaults to `prompt`
-- `PROPBOOK_PROMPT_TITLE_PATH` defaults to `title`
+- `PROMPTBOOK_PROMPT_TEXT_PATH` defaults to `prompt`
+- `PROMPTBOOK_PROMPT_TITLE_PATH` defaults to `title`
 
 ## Usage
 
@@ -74,14 +74,14 @@ Run from the repository root.
 Single prompt:
 
 ```bash
-python3 skills/propbook-prompt-evaluator/scripts/evaluate_propbook_prompts.py \
+python3 skills/promptbook-prompt-evaluator/scripts/evaluate_promptbook_prompts.py \
   --request "帮我评估一下 100729"
 ```
 
 Range:
 
 ```bash
-python3 skills/propbook-prompt-evaluator/scripts/evaluate_propbook_prompts.py \
+python3 skills/promptbook-prompt-evaluator/scripts/evaluate_promptbook_prompts.py \
   --request "评估 100729 到 100735" \
   --post-results
 ```
@@ -89,14 +89,14 @@ python3 skills/propbook-prompt-evaluator/scripts/evaluate_propbook_prompts.py \
 Explicit IDs:
 
 ```bash
-python3 skills/propbook-prompt-evaluator/scripts/evaluate_propbook_prompts.py \
+python3 skills/promptbook-prompt-evaluator/scripts/evaluate_promptbook_prompts.py \
   --ids 100729 100731 100740
 ```
 
 Dry-run ID parsing only:
 
 ```bash
-python3 skills/propbook-prompt-evaluator/scripts/evaluate_propbook_prompts.py \
+python3 skills/promptbook-prompt-evaluator/scripts/evaluate_promptbook_prompts.py \
   --request "帮我评估 100729 到 100731 和 100740" \
   --resolve-only
 ```
@@ -105,7 +105,7 @@ python3 skills/propbook-prompt-evaluator/scripts/evaluate_propbook_prompts.py \
 
 By default the script writes reports under:
 
-`test-results/propbook-prompt-evaluator/<timestamp>/`
+`test-results/promptbook-prompt-evaluator/<timestamp>/`
 
 It creates:
 
@@ -123,6 +123,6 @@ It creates:
 ## Implementation Notes
 
 - Use the bundled Python script for deterministic steps instead of manually redoing the flow.
-- Use [hsbc_prompt_quality_evaluator.md](/Users/olivia/shawn/codespace/knowledgebase/skills/propbook-prompt-evaluator/references/hsbc_prompt_quality_evaluator.md) as the source evaluator prompt.
+- Use [hsbc_prompt_quality_evaluator.md](/Users/olivia/shawn/codespace/shawn-skills/skills/promptbook-prompt-evaluator/references/hsbc_prompt_quality_evaluator.md) as the source evaluator prompt.
 - If the PromptBook API response shape differs from the default assumptions, update the JSON-path environment variables or patch the client logic.
 - If the post-score contract differs from the placeholder body shape, patch the posting function instead of forcing the wrong payload.

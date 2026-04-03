@@ -6,7 +6,7 @@ This skill ships with placeholder API assumptions so it can be adapted to the re
 
 Set:
 
-- `PROPBOOK_GET_PROMPT_URL_TEMPLATE`
+- `PROMPTBOOK_GET_PROMPT_URL_TEMPLATE`
 
 Expected usage:
 
@@ -31,21 +31,21 @@ Example fetch response shape:
 
 If the real API nests fields, set:
 
-- `PROPBOOK_PROMPT_TEXT_PATH`
-- `PROPBOOK_PROMPT_TITLE_PATH`
+- `PROMPTBOOK_PROMPT_TEXT_PATH`
+- `PROMPTBOOK_PROMPT_TITLE_PATH`
 
 Example:
 
 ```text
-PROPBOOK_PROMPT_TEXT_PATH=data.promptContent
-PROPBOOK_PROMPT_TITLE_PATH=data.name
+PROMPTBOOK_PROMPT_TEXT_PATH=data.promptContent
+PROMPTBOOK_PROMPT_TITLE_PATH=data.name
 ```
 
 ## Post Score
 
 Set:
 
-- `PROPBOOK_POST_SCORE_URL_TEMPLATE`
+- `PROMPTBOOK_POST_SCORE_URL_TEMPLATE`
 
 Expected usage:
 
@@ -73,7 +73,7 @@ If the real API expects a different payload, patch `post_result()` in the script
 
 If your PromptBook API requires bearer auth, set:
 
-- `PROPBOOK_API_TOKEN`
+- `PROMPTBOOK_API_TOKEN`
 
 If your evaluator endpoint requires bearer auth, set:
 
