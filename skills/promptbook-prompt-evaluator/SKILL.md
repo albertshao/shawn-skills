@@ -13,6 +13,21 @@ Use this skill to run the full PromptBook prompt-review flow:
 4. Save one strict JSON report per prompt.
 5. Optionally post the result back to PromptBook.
 
+## Prompt Evaluator Flow
+
+```mermaid
+flowchart LR
+    A["User Request<br/>Single ID / Multiple IDs / Range"]
+    B["Resolve Prompt IDs"]
+    C["Fetch Prompt Content<br/>from PromptBook"]
+    D["Run HSBC Prompt<br/>Quality Evaluator"]
+    E["Validate Strict JSON"]
+    F["Save JSON Report"]
+    G["Optionally Post Score<br/>Back to PromptBook"]
+
+    A --> B --> C --> D --> E --> F --> G
+```
+
 ## Script Location
 
 `skills/promptbook-prompt-evaluator/scripts/evaluate_promptbook_prompts.py`
