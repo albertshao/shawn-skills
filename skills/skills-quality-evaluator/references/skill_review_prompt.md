@@ -20,7 +20,18 @@ Evaluate the skill for:
 - Score each dimension from `0` to `100`.
 - Scores should be evidence-based and reflect the provided skill contents only.
 - Be strict but fair.
-- Do not compute the weighted total score in a hand-wavy way; return only per-dimension scores and review notes. The caller will compute the weighted total.
+- Return `overall_score` as the weighted total using these weights:
+  - trigger_discoverability: 15
+  - instruction_quality: 20
+  - determinism_reliability: 20
+  - structure_best_practice: 15
+  - safety_compliance: 15
+  - business_value_reusability: 15
+- Return `overall_comment` as a concise executive summary.
+- Return `recommendation` as one of:
+  - `Approve`
+  - `Human Review`
+  - `Reject`
 
 ## Output Requirements
 
@@ -28,39 +39,33 @@ Return only valid JSON in this structure:
 
 ```json
 {
-  "review_summary": "A concise overall assessment of the skill submission.",
-  "key_strengths": [
-    "Strength 1",
-    "Strength 2"
-  ],
-  "key_risks": [
-    "Risk 1",
-    "Risk 2"
-  ],
+  "overall_score": 91,
+  "overall_comment": "This skill is well-designed, deterministic, and aligned with best practices. It demonstrates strong structure and high reusability, with only minor improvements needed in edge-case handling.",
+  "recommendation": "Human Review",
   "details": {
     "trigger_discoverability": {
-      "score": 90,
-      "comment": "Clear triggers and boundaries with minor ambiguity around edge cases."
+      "score": 92,
+      "comment": "Clear triggering conditions with both positive and negative cases defined. Minor ambiguity in edge scenarios."
     },
     "instruction_quality": {
-      "score": 88,
-      "comment": "Instructions are structured and executable, but a few steps remain implicit."
+      "score": 90,
+      "comment": "Well-structured and mostly deterministic instructions. Could further improve by adding explicit decision branches."
     },
     "determinism_reliability": {
-      "score": 84,
-      "comment": "Good script support, though some output expectations could be tighter."
+      "score": 88,
+      "comment": "Outputs are generally stable, but some steps rely on LLM interpretation rather than deterministic logic."
     },
     "structure_best_practice": {
-      "score": 92,
-      "comment": "Well organized and aligned with skill engineering conventions."
+      "score": 95,
+      "comment": "Fully aligned with skill best practices, including proper structure and progressive disclosure."
     },
     "safety_compliance": {
-      "score": 86,
-      "comment": "Mostly safe, but enterprise boundaries could be more explicit."
+      "score": 94,
+      "comment": "Clearly defines safe usage boundaries and avoids risky operations."
     },
     "business_value_reusability": {
-      "score": 89,
-      "comment": "Strong reuse potential for repeated workflow reviews."
+      "score": 93,
+      "comment": "High business value and reusable across multiple teams and scenarios."
     }
   }
 }
@@ -74,3 +79,4 @@ Return only valid JSON in this structure:
 - If the skill duplicates obvious base-model behavior without durable value, penalize Business Value.
 - If the skill structure is messy or key files are missing, penalize Structure & Best Practice.
 - Keep comments concise, specific, and professional.
+- Return JSON only. Do not wrap it in markdown fences.

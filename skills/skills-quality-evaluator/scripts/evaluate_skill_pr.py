@@ -35,6 +35,8 @@ WEIGHTS = {
     "business_value_reusability": 15,
 }
 
+RECOMMENDATIONS = {"Approve", "Human Review", "Reject"}
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -256,17 +258,15 @@ def build_evaluation_prompt(
 
 
 def validate_result(result: dict[str, Any]) -> dict[str, Any]:
-    review_summary = result.get("review_summary")
-    if not isinstance(review_summary, str) or not review_summary.strip():
-        raise ValueError("Missing review_summary.")
+    overall_comment = result.get("overall_comment")
+    if not isinstance(overall_comment, str) or not overall_comment.strip():
+        raise ValueError("Missing overall_comment.")
 
-    strengths = result.get("key_strengths")
-    if not isinstance(strengths, list) or not all(isinstance(item, str) for item in strengths):
-        raise ValueError("key_strengths must be a list of strings.")
-
-    risks = result.get("key_risks")
-    if not isinstance(risks, list) or not all(isinstance(item, str) for item in risks):
-        raise ValueError("key_risks must be a list of strings.")
+    recommendation = result.get("recommendation")
+    if recommendation not in RECOMMENDATIONS:
+        raise ValueError(
+            "recommendation must be one of: Approve, Human Review, Reject"
+        )
 
     details = result.get("details")
     if not isinstance(details, dict):
@@ -288,10 +288,16 @@ def validate_result(result: dict[str, Any]) -> dict[str, Any]:
             "comment": comment.strip(),
         }
 
+    overall_score = result.get("overall_score")
+    if isinstance(overall_score, (int, float)):
+        overall_score = round(float(overall_score), 2)
+    else:
+        overall_score = weighted_total(normalized_details)
+
     return {
-        "review_summary": review_summary.strip(),
-        "key_strengths": [item.strip() for item in strengths if item.strip()],
-        "key_risks": [item.strip() for item in risks if item.strip()],
+        "overall_score": overall_score,
+        "overall_comment": overall_comment.strip(),
+        "recommendation": recommendation,
         "details": normalized_details,
     }
 
@@ -313,16 +319,6 @@ def rating_level(score: float) -> str:
     return "Rejected"
 
 
-def recommendation(score: float) -> str:
-    if score >= 90:
-        return "Publish"
-    if score >= 80:
-        return "Publish with Minor Improvements"
-    if score >= 70:
-        return "Revise Before Approval"
-    return "Do Not Publish"
-
-
 def write_json(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
@@ -331,7 +327,7 @@ def render_skill_section(skill_name: str, evaluation: dict[str, Any]) -> str:
     lines = [
         f"### `{skill_name}`",
         "",
-        evaluation["review_summary"],
+        evaluation["overall_comment"],
         "",
         f"**Overall score:** {evaluation['overall_score']}",
         f"**Rating:** {evaluation['rating_level']}",
@@ -353,13 +349,6 @@ def render_skill_section(skill_name: str, evaluation: dict[str, Any]) -> str:
         lines.append(
             f"| {labels[dimension]} | {WEIGHTS[dimension]}% | {detail['score']} | {detail['comment']} |"
         )
-
-    if evaluation["key_strengths"]:
-        lines.extend(["", "**Key strengths**"])
-        lines.extend([f"- {item}" for item in evaluation["key_strengths"]])
-    if evaluation["key_risks"]:
-        lines.extend(["", "**Key risks / improvements**"])
-        lines.extend([f"- {item}" for item in evaluation["key_risks"]])
     lines.append("")
     return "\n".join(lines)
 
@@ -448,12 +437,11 @@ def main() -> int:
         validated = validate_result(raw_result)
         overall = weighted_total(validated["details"])
         skill_report = {
+            **validated,
             "skill_name": skill_dir.split("/", 1)[1],
             "skill_dir": skill_dir,
             "overall_score": overall,
             "rating_level": rating_level(overall),
-            "recommendation": recommendation(overall),
-            **validated,
         }
         evaluations.append(skill_report)
         report_name = f"{skill_report['skill_name']}_evaluation.json"

@@ -13,7 +13,7 @@ Use this skill to review skill-related pull requests in GitHub and turn the revi
 2. Identifies changed skill folders under `skills/`.
 3. Reads the skill bundle at the PR head commit.
 4. Evaluates each skill against the six governance dimensions.
-5. Calculates the weighted total score and recommendation.
+5. Validates the LLM judge output and recomputes the weighted total score locally.
 6. Writes a JSON report and a polished Markdown review.
 7. Optionally posts the result back to the PR as a comment or review.
 
@@ -112,6 +112,42 @@ It creates:
 - `pr_review_comment.md`
 - `run_summary.json`
 
+Each evaluation JSON uses this structure:
+
+```json
+{
+  "overall_score": 91,
+  "overall_comment": "This skill is well-designed, deterministic, and aligned with best practices. It demonstrates strong structure and high reusability, with only minor improvements needed in edge-case handling.",
+  "recommendation": "Human Review",
+  "details": {
+    "trigger_discoverability": {
+      "score": 92,
+      "comment": "Clear triggering conditions with both positive and negative cases defined. Minor ambiguity in edge scenarios."
+    },
+    "instruction_quality": {
+      "score": 90,
+      "comment": "Well-structured and mostly deterministic instructions. Could further improve by adding explicit decision branches."
+    },
+    "determinism_reliability": {
+      "score": 88,
+      "comment": "Outputs are generally stable, but some steps rely on LLM interpretation rather than deterministic logic."
+    },
+    "structure_best_practice": {
+      "score": 95,
+      "comment": "Fully aligned with skill best practices, including proper structure and progressive disclosure."
+    },
+    "safety_compliance": {
+      "score": 94,
+      "comment": "Clearly defines safe usage boundaries and avoids risky operations."
+    },
+    "business_value_reusability": {
+      "score": 93,
+      "comment": "High business value and reusable across multiple teams and scenarios."
+    }
+  }
+}
+```
+
 ## Review Rules
 
 - Only evaluate skills changed under `skills/`.
@@ -119,11 +155,12 @@ It creates:
 - Do not fabricate skill content when `gh` cannot fetch a file.
 - Keep the final PR comment professional and decision-oriented.
 - Use the bundled evaluation framework and prompt, not ad hoc criteria.
-- Recompute the weighted total score locally from the six dimension scores.
+- Recompute the weighted total score locally from the six dimension scores, even if the model already returned `overall_score`.
+- Accept only `Approve`, `Human Review`, or `Reject` as recommendation values.
 
 ## References
 
 Read these when using or modifying the skill:
 
-- [skill_evaluation_framework.md](/Users/olivia/shawn/codespace/knowledgebase/skills/skills-quality-evaluator/references/skill_evaluation_framework.md)
-- [skill_review_prompt.md](/Users/olivia/shawn/codespace/knowledgebase/skills/skills-quality-evaluator/references/skill_review_prompt.md)
+- [skill_evaluation_framework.md](/Users/olivia/shawn/codespace/shawn-skills/skills/skills-quality-evaluator/references/skill_evaluation_framework.md)
+- [skill_review_prompt.md](/Users/olivia/shawn/codespace/shawn-skills/skills/skills-quality-evaluator/references/skill_review_prompt.md)
