@@ -43,7 +43,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--review-json-files",
         nargs="+",
-        help="One or more agent-generated review JSON files to render into a human-readable PR comment.",
+        help="One or more agent-generated review JSON files. These will be validated, rendered into Markdown, and posted back to the PR.",
     )
     parser.add_argument(
         "--post-comment-file",
@@ -56,7 +56,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--post-rendered-comment",
         action="store_true",
-        help="Post the Markdown comment rendered from --review-json-files.",
+        help="Post the Markdown comment rendered from --review-json-files as a PR comment. This is the default if no rendered-post mode is specified.",
     )
     parser.add_argument(
         "--submit-rendered-review",
@@ -435,6 +435,8 @@ def main() -> int:
         raise ValueError("Use either --post-rendered-comment or --submit-rendered-review, not both.")
     if (args.post_rendered_comment or args.submit_rendered_review) and not args.review_json_files:
         raise ValueError("`--post-rendered-comment` and `--submit-rendered-review` require `--review-json-files`.")
+    if args.review_json_files and not args.post_rendered_comment and not args.submit_rendered_review:
+        args.post_rendered_comment = True
 
     auth_info = ensure_github_auth()
     output_dir = ensure_output_dir(args.repo, args.pr, args.output_dir)
