@@ -13,9 +13,9 @@ Use this skill to review skill-related pull requests in GitHub and turn the revi
 2. Identifies changed skill folders under `skills/`.
 3. Materializes the changed skill bundle from the PR head commit into a local review workspace.
 4. The agent evaluates each skill against the six governance dimensions.
-5. The agent writes strict JSON review output and a polished Markdown review comment.
-6. Optionally validates the JSON schema locally.
-7. Optionally posts the result back to the PR as a comment or review.
+5. The agent writes strict JSON review output.
+6. The helper script converts the JSON result into polished Markdown for human reviewers.
+7. The helper script can validate the JSON schema and update the PR with the rendered Markdown.
 
 ## Evaluation Flow
 
@@ -25,9 +25,10 @@ flowchart LR
     B --> C["Collect changed skill folders<br/>under skills/"]
     C --> D["gh api<br/>Read skill files at PR head"]
     D --> E["Agent review<br/>6 governance dimensions"]
-    E --> F["Write strict JSON score<br/>and Markdown review"]
-    F --> G["Optional local JSON validation"]
-    G --> H["gh pr comment / gh pr review<br/>Post professional PR feedback"]
+    E --> F["Write strict JSON score"]
+    F --> G["Render JSON to<br/>professional Markdown"]
+    G --> H["Optional JSON validation"]
+    H --> I["gh pr comment / gh pr review<br/>Update PR for human reviewers"]
 ```
 
 ## Script Location
@@ -65,6 +66,9 @@ Do not call a separate evaluator model API for this skill.
 The agent is the judge.
 Use `gh` CLI to fetch the PR and skill files, then perform the evaluation directly in the agent using the framework in the references folder.
 
+Before any GitHub operation, check whether GitHub authentication is configured.
+If neither `GH_TOKEN` / `GITHUB_TOKEN` nor `gh auth login` is available, stop and tell the user to configure GitHub auth first.
+
 ## Usage
 
 Collect PR context for agent review:
@@ -84,13 +88,23 @@ python3 skills/skills-quality-evaluator/scripts/evaluate_skill_pr.py \
   --validate-review-json /path/to/review.json
 ```
 
-Post a prepared Markdown PR comment:
+Render one or more review JSON files into a polished Markdown PR comment:
 
 ```bash
 python3 skills/skills-quality-evaluator/scripts/evaluate_skill_pr.py \
   --repo owner/repo \
   --pr 123 \
-  --post-comment-file /path/to/pr_review_comment.md
+  --review-json-files /path/to/skill-a_review.json /path/to/skill-b_review.json
+```
+
+Render the review JSON and post it back to the PR:
+
+```bash
+python3 skills/skills-quality-evaluator/scripts/evaluate_skill_pr.py \
+  --repo owner/repo \
+  --pr 123 \
+  --review-json-files /path/to/skill-a_review.json /path/to/skill-b_review.json \
+  --post-rendered-comment
 ```
 
 ## Outputs
@@ -106,6 +120,8 @@ It creates:
 - a materialized copy of each changed skill bundle under `skill_bundles/`
 - one `*_review_stub.json` per skill under `review_stubs/`
 - `pr_review_comment_template.md`
+- `validated_reviews.json` when review JSON files are supplied
+- `pr_review_comment.md` when review JSON files are rendered
 - `run_summary.json`
 
 The agent should produce one evaluation JSON per skill using this structure:
@@ -153,7 +169,7 @@ The agent should produce one evaluation JSON per skill using this structure:
 - Use the bundled evaluation framework and prompt, not ad hoc criteria.
 - Use the exact JSON schema shown above.
 - Accept only `Approve`, `Human Review`, or `Reject` as recommendation values.
-- Use the helper script for GitHub data collection, JSON validation, and PR posting, not for model-based judging.
+- Use the helper script for GitHub data collection, JSON validation, JSON-to-Markdown rendering, and PR posting, not for model-based judging.
 
 ## References
 

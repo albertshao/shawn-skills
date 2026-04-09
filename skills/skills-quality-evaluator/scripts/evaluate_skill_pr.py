@@ -6,9 +6,9 @@ from __future__ import annotations
 import argparse
 import base64
 import json
+import os
 import subprocess
 import sys
-import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -41,12 +41,27 @@ def parse_args() -> argparse.Namespace:
         help="Validate an agent-generated review JSON file against the expected schema.",
     )
     parser.add_argument(
+        "--review-json-files",
+        nargs="+",
+        help="One or more agent-generated review JSON files to render into a human-readable PR comment.",
+    )
+    parser.add_argument(
         "--post-comment-file",
         help="Post a prepared Markdown file as a PR comment.",
     )
     parser.add_argument(
         "--submit-review-file",
         help="Submit a prepared Markdown file as a PR review comment.",
+    )
+    parser.add_argument(
+        "--post-rendered-comment",
+        action="store_true",
+        help="Post the Markdown comment rendered from --review-json-files.",
+    )
+    parser.add_argument(
+        "--submit-rendered-review",
+        action="store_true",
+        help="Submit the Markdown review rendered from --review-json-files.",
     )
     return parser.parse_args()
 
@@ -61,6 +76,26 @@ def run_gh(args: list[str]) -> str:
     if result.returncode != 0:
         raise RuntimeError(result.stderr.strip() or f"gh {' '.join(args)} failed")
     return result.stdout
+
+
+def ensure_github_auth() -> dict[str, str]:
+    env_token = os.getenv("GH_TOKEN") or os.getenv("GITHUB_TOKEN")
+    if env_token:
+        return {"auth_source": "env_token"}
+
+    result = subprocess.run(
+        ["gh", "auth", "status"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode == 0:
+        return {"auth_source": "gh_auth"}
+
+    raise RuntimeError(
+        "GitHub token/auth is not configured. Set `GH_TOKEN` or `GITHUB_TOKEN`, "
+        "or run `gh auth login`, then retry."
+    )
 
 
 def ensure_output_dir(repo: str, pr_number: int, output_dir: str | None) -> Path:
@@ -187,6 +222,7 @@ def materialize_bundle(output_dir: Path, skill_dir: str, skill_files: dict[str, 
 
 def build_review_stub(skill_name: str) -> dict[str, Any]:
     return {
+        "skill_name": skill_name,
         "overall_score": 0,
         "overall_comment": "",
         "recommendation": "Human Review",
@@ -248,6 +284,9 @@ def write_review_template(output_dir: Path, repo: str, pr_metadata: dict[str, An
 
 def validate_review_json(path: Path) -> dict[str, Any]:
     payload = json.loads(path.read_text(encoding="utf-8"))
+    skill_name = payload.get("skill_name")
+    if not isinstance(skill_name, str) or not skill_name.strip():
+        skill_name = infer_skill_name(path)
 
     overall_score = payload.get("overall_score")
     if not isinstance(overall_score, (int, float)) or not 0 <= float(overall_score) <= 100:
@@ -279,9 +318,105 @@ def validate_review_json(path: Path) -> dict[str, Any]:
     return {
         "valid": True,
         "review_json": str(path.resolve()),
+        "skill_name": skill_name.strip(),
         "recommendation": recommendation,
         "overall_score": round(float(overall_score), 2),
+        "review": {
+            "skill_name": skill_name.strip(),
+            "overall_score": round(float(overall_score), 2),
+            "overall_comment": overall_comment.strip(),
+            "recommendation": recommendation,
+            "details": details,
+        },
     }
+
+
+def infer_skill_name(path: Path) -> str:
+    stem = path.stem
+    suffixes = (
+        "_review",
+        "-review",
+        "_evaluation",
+        "-evaluation",
+        "_score",
+        "-score",
+        "_result",
+        "-result",
+    )
+    for suffix in suffixes:
+        if stem.endswith(suffix):
+            stem = stem[: -len(suffix)]
+            break
+    return stem
+
+
+def render_skill_markdown(review: dict[str, Any]) -> str:
+    labels = {
+        "trigger_discoverability": "Trigger & Discoverability",
+        "instruction_quality": "Instruction Quality",
+        "determinism_reliability": "Determinism & Reliability",
+        "structure_best_practice": "Structure & Best Practice",
+        "safety_compliance": "Safety & Compliance",
+        "business_value_reusability": "Business Value & Reusability",
+    }
+    lines = [
+        f"### `{review['skill_name']}`",
+        "",
+        review["overall_comment"],
+        "",
+        f"**Overall score:** {review['overall_score']}",
+        f"**Recommendation:** {review['recommendation']}",
+        "",
+        "| Dimension | Score | Comment |",
+        "| --- | ---: | --- |",
+    ]
+    for dimension in DIMENSIONS:
+        detail = review["details"][dimension]
+        lines.append(
+            f"| {labels[dimension]} | {detail['score']} | {detail['comment']} |"
+        )
+    lines.append("")
+    return "\n".join(lines)
+
+
+def render_markdown_comment(
+    repo: str,
+    pr_metadata: dict[str, Any],
+    validated_reviews: list[dict[str, Any]],
+) -> str:
+    lines = [
+        "# Skill Governance Review",
+        "",
+        f"Repository: `{repo}`",
+        f"PR: [#{pr_metadata['number']} {pr_metadata['title']}]({pr_metadata['url']})",
+        f"Head branch: `{pr_metadata.get('headRefName', 'unknown')}`",
+        f"Base branch: `{pr_metadata.get('baseRefName', 'unknown')}`",
+        "",
+        "## Summary",
+        "",
+        "| Skill | Overall Score | Recommendation | Overall Comment |",
+        "| --- | ---: | --- | --- |",
+    ]
+    for item in validated_reviews:
+        review = item["review"]
+        lines.append(
+            f"| `{review['skill_name']}` | {review['overall_score']} | "
+            f"{review['recommendation']} | {review['overall_comment']} |"
+        )
+
+    lines.extend(["", "## Detailed Review", ""])
+    for item in validated_reviews:
+        lines.append(render_skill_markdown(item["review"]))
+
+    lines.extend(
+        [
+            "## Method",
+            "",
+            "This review was produced from the agent-generated JSON assessment and rendered into Markdown for PR readability. Human reviewers can use this summary to quickly understand the recommendation, total score, and dimension-level comments for each submitted skill.",
+            "",
+        ]
+    )
+    return "\n".join(lines)
 
 
 def post_pr_comment(repo: str, pr_number: int, comment_file: Path) -> None:
@@ -296,7 +431,12 @@ def main() -> int:
     args = parse_args()
     if args.post_comment_file and args.submit_review_file:
         raise ValueError("Use either --post-comment-file or --submit-review-file, not both.")
+    if args.post_rendered_comment and args.submit_rendered_review:
+        raise ValueError("Use either --post-rendered-comment or --submit-rendered-review, not both.")
+    if (args.post_rendered_comment or args.submit_rendered_review) and not args.review_json_files:
+        raise ValueError("`--post-rendered-comment` and `--submit-rendered-review` require `--review-json-files`.")
 
+    auth_info = ensure_github_auth()
     output_dir = ensure_output_dir(args.repo, args.pr, args.output_dir)
     pr_metadata = fetch_pr_metadata(args.repo, args.pr)
     write_json(output_dir / "pr_metadata.json", pr_metadata)
@@ -337,20 +477,39 @@ def main() -> int:
         validation_result = validate_review_json(Path(args.validate_review_json))
         write_json(output_dir / "validation_result.json", validation_result)
 
+    rendered_comment_file: Path | None = None
+    validated_reviews: list[dict[str, Any]] = []
+    if args.review_json_files:
+        for raw_path in args.review_json_files:
+            validated_reviews.append(validate_review_json(Path(raw_path)))
+        write_json(output_dir / "validated_reviews.json", validated_reviews)
+        markdown = render_markdown_comment(args.repo, pr_metadata, validated_reviews)
+        rendered_comment_file = output_dir / "pr_review_comment.md"
+        rendered_comment_file.write_text(markdown + "\n", encoding="utf-8")
+
     if args.post_comment_file:
         post_pr_comment(args.repo, args.pr, Path(args.post_comment_file))
     if args.submit_review_file:
         submit_pr_review(args.repo, args.pr, Path(args.submit_review_file))
+    if args.post_rendered_comment and rendered_comment_file:
+        post_pr_comment(args.repo, args.pr, rendered_comment_file)
+    if args.submit_rendered_review and rendered_comment_file:
+        submit_pr_review(args.repo, args.pr, rendered_comment_file)
 
     summary = {
         "repo": args.repo,
         "pr": args.pr,
+        "auth_info": auth_info,
         "changed_skill_dirs": changed_skill_dirs,
         "bundle_manifests": bundle_manifests,
         "review_template_file": str(template_path.resolve()),
         "validation_result": validation_result,
+        "validated_reviews_file": str((output_dir / "validated_reviews.json").resolve()) if validated_reviews else None,
+        "rendered_comment_file": str(rendered_comment_file.resolve()) if rendered_comment_file else None,
         "posted_comment_file": str(Path(args.post_comment_file).resolve()) if args.post_comment_file else None,
         "submitted_review_file": str(Path(args.submit_review_file).resolve()) if args.submit_review_file else None,
+        "posted_rendered_comment": bool(args.post_rendered_comment and rendered_comment_file),
+        "submitted_rendered_review": bool(args.submit_rendered_review and rendered_comment_file),
     }
     write_json(output_dir / "run_summary.json", summary)
     print(json.dumps(summary, ensure_ascii=False, indent=2))
