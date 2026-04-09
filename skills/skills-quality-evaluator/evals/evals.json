@@ -1,0 +1,17 @@
+{
+  "skill_name": "skills-quality-evaluator",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Review PR #123 in owner/repo that adds a new skill under skills/, score it against the skill governance framework, and prepare a professional PR comment.",
+      "expected_output": "The skill fetches PR metadata with gh CLI, evaluates the changed skill, generates a weighted score report, and writes a polished Markdown PR review.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Assess a PR that updates two skills in the marketplace repository and submit the governance review back to the PR.",
+      "expected_output": "The skill identifies both skill folders, evaluates each one, computes weighted scores, produces a multi-skill comment, and can post it back to GitHub.",
+      "files": []
+    }
+  ]
+}
